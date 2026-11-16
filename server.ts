@@ -9,6 +9,32 @@ import {
 } from '@cloudcart/nitrogen';
 import {createNitrogenRouterContext} from '~/lib/context';
 
+type CustomEnvironment = Env & {
+  APP_SESSION_SECRET?: string;
+  APP_STORE_DOMAIN?: string;
+  APP_PUBLIC_STOREFRONT_API_TOKEN?: string;
+  APP_PRIVATE_STOREFRONT_API_TOKEN?: string;
+};
+
+/**
+ * CloudCart normally injects the system variables below. The storefront also
+ * accepts their APP_* custom equivalents so it can run when provisioning did
+ * not create the read-only variables.
+ */
+function resolveRuntimeEnvironment(env: Env): Env {
+  const customEnvironment = env as CustomEnvironment;
+
+  return {
+    ...env,
+    SESSION_SECRET: env.SESSION_SECRET || customEnvironment.APP_SESSION_SECRET,
+    PUBLIC_STORE_DOMAIN: env.PUBLIC_STORE_DOMAIN || customEnvironment.APP_STORE_DOMAIN,
+    PUBLIC_STOREFRONT_API_TOKEN:
+      env.PUBLIC_STOREFRONT_API_TOKEN || customEnvironment.APP_PUBLIC_STOREFRONT_API_TOKEN,
+    PRIVATE_STOREFRONT_API_TOKEN:
+      env.PRIVATE_STOREFRONT_API_TOKEN || customEnvironment.APP_PRIVATE_STOREFRONT_API_TOKEN,
+  } as Env;
+}
+
 /**
  * The storefront's app. Every request reaches it through the page cache's
  * gateway below - in development too, where Nitrogen's Vite plugin runs this
@@ -17,7 +43,8 @@ import {createNitrogenRouterContext} from '~/lib/context';
 const app = {
   async fetch(request: Request, env: Env, executionContext: ExecutionContext): Promise<Response> {
     try {
-      const nitrogenContext = await createNitrogenRouterContext(request, env, executionContext);
+      const runtimeEnvironment = resolveRuntimeEnvironment(env);
+      const nitrogenContext = await createNitrogenRouterContext(request, runtimeEnvironment, executionContext);
 
       /**
        * Nitrogen's request handler serves the Storefront API at /api/sf and
@@ -28,7 +55,7 @@ const app = {
         mode: process.env.NODE_ENV,
         getLoadContext: () => nitrogenContext,
         // Only the store's own domain is indexed: a preview host answers with `X-Robots-Tag: noindex` (B-262).
-        storeDomain: env.PUBLIC_STORE_DOMAIN,
+        storeDomain: runtimeEnvironment.PUBLIC_STORE_DOMAIN,
       });
 
       const response = await handleRequest(request);
@@ -65,7 +92,8 @@ const pageCache = createPageCache(app, {
   build: serverBuild,
   async isPersonal(request, env: Env) {
     try {
-      return hasSignedInCustomer(await AppSession.init(request, [env.SESSION_SECRET]));
+      const runtimeEnvironment = resolveRuntimeEnvironment(env);
+      return hasSignedInCustomer(await AppSession.init(request, [runtimeEnvironment.SESSION_SECRET]));
     } catch {
       // A session that cannot be read (no `SESSION_SECRET`): the app answers it, with the error, uncached.
       return true;
