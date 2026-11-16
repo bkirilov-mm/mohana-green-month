@@ -1,5 +1,5 @@
 import {isbot} from 'isbot';
-import {renderToReadableStream} from 'react-dom/server';
+import {renderToReadableStream} from 'react-dom/server.edge';
 import {type EntryContext, type RouterContextProvider, ServerRouter} from 'react-router';
 import {
   cloudCartPayExpressSources,
