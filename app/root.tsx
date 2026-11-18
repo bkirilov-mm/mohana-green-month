@@ -47,6 +47,7 @@ import {PRIVACY_BANNER_CLASSES} from '~/lib/privacy-banner';
 import {SUBSCRIBE_POPUP_CLASSES, subscribeFormLabels} from '~/lib/subscribe-forms';
 import {getTranslations} from '~/lib/translations.server';
 import {isCartOrWishlistForm} from '~/lib/cart';
+import {useEmbeddedLanding} from '~/lib/embed';
 import {KEPT_PAGES} from '~/lib/kept-pages';
 import {pagePath} from '~/lib/urls';
 import appStyles from '~/styles/app.css?url';
@@ -151,7 +152,13 @@ async function loadCriticalData({context, request}: Route.LoaderArgs) {
   // paints with the page, not after hydration.
   const consentChoice = getConsentFromCookieHeader(request.headers.get('Cookie'), cookieConsent?.cookieName);
 
-  return {header, cookieConsent, cloudCartPayExpress, consentChoice, translations};
+  return {
+    header,
+    cookieConsent,
+    cloudCartPayExpress,
+    consentChoice,
+    translations,
+  };
 }
 
 /**
@@ -279,6 +286,7 @@ function AppShell({data: root, children}: {data: Awaited<ReturnType<RootLoader>>
   const data = useRootWithVisitorData(root);
   // The cart a cart form answered with, until the root's own data comes again.
   const cart = useLatestCart(data.cart);
+  const embedded = useEmbeddedLanding();
 
   return (
     <TranslationsProvider translations={data.translations}>
@@ -294,13 +302,17 @@ function AppShell({data: root, children}: {data: Awaited<ReturnType<RootLoader>>
         <PageLayout {...data} cart={cart} hasCookieConsent={Boolean(data.cookieConsent)}>
           {children}
         </PageLayout>
-        <PrivacyBanner
-          consent={data.cookieConsent}
-          storedChoice={data.consentChoice}
-          classNames={PRIVACY_BANNER_CLASSES}
-        />
-        <StorePopups forms={data.subscribeForms} consent={data.cookieConsent} />
-        <PolicyConsentRequest />
+        {!embedded && (
+          <>
+            <PrivacyBanner
+              consent={data.cookieConsent}
+              storedChoice={data.consentChoice}
+              classNames={PRIVACY_BANNER_CLASSES}
+            />
+            <StorePopups forms={data.subscribeForms} consent={data.cookieConsent} />
+            <PolicyConsentRequest />
+          </>
+        )}
         <StoreValidityMessages />
       </Analytics.Provider>
     </TranslationsProvider>
@@ -340,8 +352,9 @@ export function ErrorBoundary() {
     const missing = isRouteErrorResponse(error) && error.status === 404;
     return (
       <div className="mx-auto max-w-reading px-gutter py-24 text-center">
-        {/* eslint-disable-next-line starter/no-literal-text -- no translations without the root's data */}
+        {/* eslint-disable starter/no-literal-text -- no translations without the root's data */}
         <h1 className="text-h3">{missing ? 'Page not found' : 'Something went wrong'}</h1>
+        {/* eslint-enable starter/no-literal-text -- translations resume once root data exists */}
       </div>
     );
   }
