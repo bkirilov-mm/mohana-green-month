@@ -12,6 +12,7 @@ import {LandingFooter, LandingHeader, useLanding} from '~/components/LandingChro
 import {PredictiveSearch} from '~/components/PredictiveSearch';
 import {NavigationProgress, PageTransition} from '~/components/PageTransition';
 import type {Streamed} from '~/lib/visitor';
+import {useEmbeddedLanding} from '~/lib/embed';
 
 interface PageLayoutProps {
   cart: Streamed<CartApiQueryFragment | null>;
@@ -36,13 +37,14 @@ export function PageLayout({
 }: PageLayoutProps) {
   // A campaign landing page (`LandingHandle`): the whole funnel, with no menu, search or footer links to leave by.
   const landing = useLanding();
+  const embedded = useEmbeddedLanding();
 
   if (landing) {
     return (
       <Aside.Provider>
         <NavigationProgress />
         <SkipLink />
-        <CartAside cart={cart} isLoggedIn={isLoggedIn} />
+        {!embedded && <CartAside cart={cart} isLoggedIn={isLoggedIn} />}
         <LandingHeader header={header} cart={cart} landing={landing} />
         <main id="main" tabIndex={-1} className="min-h-main outline-none">
           {children}

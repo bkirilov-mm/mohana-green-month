@@ -7,6 +7,7 @@ import {FooterPolicies} from '~/components/Footer';
 import {useOpenCart} from '~/components/Header';
 import {CartIcon} from '~/components/ui/icons';
 import {Countdown} from '~/components/ui/Countdown';
+import {liveStoreUrl, useEmbeddedLanding} from '~/lib/embed';
 import type {Streamed} from '~/lib/visitor';
 
 /**
@@ -49,6 +50,7 @@ export function LandingHeader({
   const {t} = useTranslation();
   const logo = header.shop.brand.logo?.image;
   const scrolled = useScrolled();
+  const embedded = useEmbeddedLanding();
 
   return (
     <header data-scrolled={scrolled || undefined} className="gm-header sticky top-0 z-40">
@@ -83,11 +85,15 @@ export function LandingHeader({
           </p>
         )}
         <div className="ml-auto">
-          <Suspense fallback={<CartPill count={0} />}>
-            <Await resolve={cart}>
-              <CartPillFromCart />
-            </Await>
-          </Suspense>
+          {embedded ? (
+            <CartPill count={null} />
+          ) : (
+            <Suspense fallback={<CartPill count={0} />}>
+              <Await resolve={cart}>
+                <CartPillFromCart />
+              </Await>
+            </Suspense>
+          )}
         </div>
       </div>
     </header>
@@ -101,21 +107,43 @@ function CartPillFromCart() {
 }
 
 /** The cart as a pill: its icon and how many items it holds; it opens the cart drawer. */
-function CartPill({count}: {count: number}) {
+function CartPill({count}: {count: number | null}) {
   const {t} = useTranslation();
   const openCart = useOpenCart();
+  const embedded = useEmbeddedLanding();
+
+  const content = (
+    <>
+      <CartIcon className="size-5" />
+      {count !== null && (
+        <span aria-hidden="true" className="tabular-nums">
+          {count}
+        </span>
+      )}
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <a
+        href={liveStoreUrl('/cart')}
+        target="_top"
+        aria-label={t('cart.title')}
+        className="gm-cart-pill inline-flex h-11 items-center gap-2 rounded-full px-4 font-medium hover:no-underline"
+      >
+        {content}
+      </a>
+    );
+  }
 
   return (
     <Link
       to="/cart"
       onClick={openCart}
-      aria-label={t('header.cart', {count})}
+      aria-label={t('header.cart', {count: count ?? 0})}
       className="gm-cart-pill inline-flex h-11 items-center gap-2 rounded-full px-4 font-medium hover:no-underline"
     >
-      <CartIcon className="size-5" />
-      <span aria-hidden="true" className="tabular-nums">
-        {count}
-      </span>
+      {content}
     </Link>
   );
 }
@@ -142,6 +170,9 @@ export function LandingFooter({
   header: HeaderQuery;
   hasCookieConsent: boolean;
 }) {
+  const embedded = useEmbeddedLanding();
+  const {t} = useTranslation();
+
   return (
     <footer className="bg-forest text-small text-cream">
       <div className="mx-auto flex max-w-page flex-col gap-4 px-gutter py-8 md:flex-row md:items-center md:justify-between md:px-gutter-md">
@@ -149,17 +180,44 @@ export function LandingFooter({
           © {new Date().getFullYear()} {header.shop.name}
         </p>
         <div className="gm-footer-links flex flex-wrap items-center gap-x-4 gap-y-2">
-          <Suspense fallback={null}>
-            <Await resolve={footer}>
-              {(data) => (
-                <FooterPolicies
-                  policies={data?.policies ?? []}
-                  hasCookieConsent={hasCookieConsent}
-                  takesPrivacyRequests={Boolean(data?.shop.gdprRequestTypes.length)}
-                />
-              )}
-            </Await>
-          </Suspense>
+          {embedded ? (
+            <nav aria-label={t('footer.policies')}>
+              <ul className="flex flex-wrap gap-x-4 gap-y-2">
+                <li>
+                  <a href={liveStoreUrl('/page/privacy-policy')} target="_top">
+                    {t('footer.privacyPolicy')}
+                  </a>
+                </li>
+                <li>
+                  <a href={liveStoreUrl('/page/terms-policy')} target="_top">
+                    {t('footer.terms')}
+                  </a>
+                </li>
+                <li>
+                  <a href={liveStoreUrl('/page/cookie-policy')} target="_top">
+                    {t('footer.cookiePolicy')}
+                  </a>
+                </li>
+                <li>
+                  <a href={liveStoreUrl('/gdpr')} target="_top">
+                    {t('footer.personalData')}
+                  </a>
+                </li>
+              </ul>
+            </nav>
+          ) : (
+            <Suspense fallback={null}>
+              <Await resolve={footer}>
+                {(data) => (
+                  <FooterPolicies
+                    policies={data?.policies ?? []}
+                    hasCookieConsent={hasCookieConsent}
+                    takesPrivacyRequests={Boolean(data?.shop.gdprRequestTypes.length)}
+                  />
+                )}
+              </Await>
+            </Suspense>
+          )}
         </div>
       </div>
     </footer>
