@@ -229,6 +229,7 @@ export function Layout({children}: {children?: React.ReactNode}) {
   const nonce = useNonce();
   const data = useRouteLoaderData<RootLoader>('root');
   const lang = data?.header.localization.language.isoCode.toLowerCase() ?? 'en';
+  const embedded = useEmbeddedLanding();
   // A frame the keyboard entered - a store's map, a video - shows the focus ring (`app.css`, B-446).
   useFrameFocusVisible();
 
@@ -239,11 +240,11 @@ export function Layout({children}: {children?: React.ReactNode}) {
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         {/* Google Consent Mode v2 from the visitor's cookie choice, before any tag loads. The merchant's Google tags are
             pixels the provider runs after consent (`pixels`); never add a vendor's script here (B-398). */}
-        <GoogleConsentMode consent={data?.cookieConsent ?? null} />
+        {!embedded && <GoogleConsentMode consent={data?.cookieConsent ?? null} />}
         {/* A page cached for every visitor: the visitor's own data is asked for at once, and the cookie bar the
             server rendered is hidden before it paints for a visitor who has already chosen. */}
-        {data?.visitorFromBrowser && <VisitorDataScript url={VISITOR_PATH} />}
-        {data?.visitorFromBrowser && <PrivacyBannerScript consent={data.cookieConsent} />}
+        {!embedded && data?.visitorFromBrowser && <VisitorDataScript url={VISITOR_PATH} />}
+        {!embedded && data?.visitorFromBrowser && <PrivacyBannerScript consent={data.cookieConsent} />}
         <link rel="preload" href={fontLatin} as="font" type="font/woff2" crossOrigin="anonymous" />
         {CYRILLIC_LANGUAGES.has(lang) && (
           <link rel="preload" href={fontCyrillic} as="font" type="font/woff2" crossOrigin="anonymous" />
@@ -295,9 +296,9 @@ function AppShell({data: root, children}: {data: Awaited<ReturnType<RootLoader>>
         shop={data.shop}
         consent={data.consent}
         wishlist={data.wishlist}
-        pixels={data.pixels}
+        pixels={embedded ? null : data.pixels}
         customerEmailHash={data.customerEmailHash}
-        cloudCartAnalytics={data.cloudCartAnalytics}
+        cloudCartAnalytics={embedded ? null : data.cloudCartAnalytics}
       >
         <PageLayout {...data} cart={cart} hasCookieConsent={Boolean(data.cookieConsent)}>
           {children}
