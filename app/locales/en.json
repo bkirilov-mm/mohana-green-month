@@ -89,6 +89,10 @@
   "footer": {
     "menu": "Footer",
     "policies": "Policies",
+    "privacyPolicy": "Privacy policy",
+    "terms": "Terms and conditions",
+    "cookiePolicy": "Cookie policy",
+    "personalData": "Personal data",
     "privacyRequest": "Privacy request",
     "cookieSettings": "Cookie settings",
     "social": "Social media",
@@ -193,6 +197,7 @@
     "soldOut": "Sold out",
     "valueSoldOut": "{value} - sold out",
     "addToCart": "Add to cart",
+    "viewProduct": "View product",
     "chooseOptions": "Choose options",
     "rating": "Rated {rating} out of 5",
     "reviewCount": {

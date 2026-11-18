@@ -89,6 +89,10 @@
   "footer": {
     "menu": "Долно меню",
     "policies": "Политики",
+    "privacyPolicy": "Политика за поверителност",
+    "terms": "Общи условия",
+    "cookiePolicy": "Политика за бисквитки",
+    "personalData": "Лични данни",
     "privacyRequest": "Заявка за лични данни",
     "cookieSettings": "Настройки на бисквитките",
     "social": "Социални мрежи",
@@ -193,6 +197,7 @@
     "soldOut": "Изчерпан",
     "valueSoldOut": "{value} - изчерпан",
     "addToCart": "Добави в количката",
+    "viewProduct": "Виж продукта",
     "chooseOptions": "Избери опции",
     "rating": "Оценка {rating} от 5",
     "reviewCount": {
