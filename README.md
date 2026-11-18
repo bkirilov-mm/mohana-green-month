@@ -46,9 +46,19 @@ npm run build
 
 ## What is preserved
 
-The supplied design, images, fonts, campaign settings, Storefront API queries, cart drawer and checkout integration are retained. Products and prices require working Mohana API credentials. This package is a full server-rendered storefront, not a static HTML embed.
+The supplied design, images, fonts, campaign settings, Storefront API queries, cart drawer and checkout integration are retained. Products and prices require working Mohana API credentials.
 
-No CloudCart HTML-builder embed is included at this stage. Hosting the same interactive landing page inside the classic store will require a separate integration step; do not paste the React source into the HTML builder.
+## Classic CloudCart page embed
+
+The classic Mohana theme remains active. The Green Month campaign is embedded only on a normal CloudCart page at `https://mohana.bg/page/green-month`.
+
+1. Deploy this repository to Nova.
+2. Confirm that `https://green-month-5978adc2ca6a108d.cloudcart.dev/mohana/landing.js` returns JavaScript.
+3. Create a classic CloudCart page with page link `green-month`.
+4. Add an HTML/Code widget and paste the complete contents of `docs/CLOUDCART-EMBED.html`.
+5. Save and publish the page, then test products, cart and checkout on desktop and mobile.
+
+The loader displays the Nitrogen campaign in a full-window frame while the browser address stays on `mohana.bg/page/green-month`. The Nitrogen content security policy permits framing only from `mohana.bg` and `www.mohana.bg`.
 
 ## Campaign edits
 

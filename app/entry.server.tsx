@@ -47,6 +47,9 @@ export default async function handleRequest(
       imgSrc: ["'self'", 'data:', 'https:'],
       mediaSrc: ["'self'", 'https:'],
       frameSrc: ['https:'],
+      // The classic Mohana storefront embeds the campaign through
+      // `public/mohana/landing.js`. No other external origin may frame it.
+      frameAncestors: ["'self'", 'https://mohana.bg', 'https://www.mohana.bg'],
       fontSrc: ["'self'", 'https:', 'data:'],
       styleSrc: ["'self'", "'unsafe-inline'", 'https:'],
     },
