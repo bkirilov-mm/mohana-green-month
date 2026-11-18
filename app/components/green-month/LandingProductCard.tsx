@@ -7,6 +7,7 @@ import {CardPrice} from '~/components/CardPrice';
 import {ChevronRightIcon, PlusIcon} from '~/components/ui/icons';
 import {ImagePlaceholder} from '~/components/ui/ImagePlaceholder';
 import {ADD_TO_CART_FETCHER_KEY} from '~/lib/cart';
+import {liveStoreUrl, useEmbeddedLanding} from '~/lib/embed';
 import {splitTitle} from '~/lib/green-month';
 import {quickAddOf} from '~/lib/quick-add';
 
@@ -96,6 +97,7 @@ export function LandingProductCard({
   const variant = product.selectedOrFirstAvailableVariant;
   const url = `/product/${product.handle}`;
   const percent = product.discount?.percent;
+  const embedded = useEmbeddedLanding();
 
   return (
     <article className="gm-card h-full">
@@ -112,9 +114,15 @@ export function LandingProductCard({
       <div className="flex flex-1 flex-col gap-1 p-4 md:p-5">
         {kind && <p className="gm-eyebrow text-ink-muted">{kind}</p>}
         <h3 className="gm-serif text-card text-ink">
-          <KeptLink to={url} prefetch="intent" className="gm-card-link">
-            {name}
-          </KeptLink>
+          {embedded ? (
+            <a href={liveStoreUrl(url)} target="_top" className="gm-card-link">
+              {name}
+            </a>
+          ) : (
+            <KeptLink to={url} prefetch="intent" className="gm-card-link">
+              {name}
+            </KeptLink>
+          )}
         </h3>
         {detail && <p className="text-small text-ink-muted">{detail}</p>}
         <div className="mt-auto flex items-end justify-between gap-3 pt-3">
@@ -131,6 +139,7 @@ export function LandingProductCard({
 /** Quick add, or the link to the product's page when it must be chosen there. Nothing for a product sold out. */
 function CardAction({product, url, viewLabel}: {product: LandingProductFragment; url: string; viewLabel?: string}) {
   const {t} = useTranslation();
+  const embedded = useEmbeddedLanding();
   const [asked, setAsked] = useState(false);
   const variant = product.selectedOrFirstAvailableVariant;
 
@@ -139,6 +148,21 @@ function CardAction({product, url, viewLabel}: {product: LandingProductFragment;
   }
 
   const {needsChoice, line} = quickAddOf(product, variant);
+
+  // The classic storefront owns the real customer session and cart. Inside the frame, always leave the frame for
+  // the live product instead of creating a second cart on the Nitrogen preview domain.
+  if (embedded) {
+    return (
+      <a
+        href={liveStoreUrl(url)}
+        target="_top"
+        className="gm-card-add inline-flex min-h-11 items-center gap-1 text-small font-bold text-leaf-deep"
+      >
+        {viewLabel ?? t('product.viewProduct')}
+        <ChevronRightIcon className="size-4" />
+      </a>
+    );
+  }
 
   if (needsChoice) {
     return (

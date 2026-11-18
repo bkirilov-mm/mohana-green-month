@@ -5,6 +5,7 @@ import type {GreenMonthHeroQuery} from 'storefrontapi.generated';
 import {AddToCartOffers} from '~/components/AddToCartOffers';
 import {CardPrice} from '~/components/CardPrice';
 import {ADD_TO_CART_FETCHER_KEY} from '~/lib/cart';
+import {liveStoreUrl, useEmbeddedLanding} from '~/lib/embed';
 import {COPY, SPOTLIGHT} from '~/lib/green-month';
 import {quickAddOf} from '~/lib/quick-add';
 import {ArrowIcon} from './marks';
@@ -106,6 +107,7 @@ export function Spotlight({product}: {product: SpotlightProduct}) {
 
 function SpotlightAction({product}: {product: SpotlightProduct}) {
   const {t} = useTranslation();
+  const embedded = useEmbeddedLanding();
   const [asked, setAsked] = useState(false);
   const variant = product.selectedOrFirstAvailableVariant;
   const url = `/product/${product.handle}`;
@@ -114,6 +116,14 @@ function SpotlightAction({product}: {product: SpotlightProduct}) {
     return <span className="text-ink-muted">{t('product.soldOut')}</span>;
   }
   const {needsChoice, line} = quickAddOf(product, variant);
+  if (embedded) {
+    return (
+      <a href={liveStoreUrl(url)} target="_top" className="gm-button gm-button-forest">
+        {t('product.viewProduct')}
+        <ArrowIcon className="size-4" />
+      </a>
+    );
+  }
   if (needsChoice) {
     return (
       <KeptLink to={url} prefetch="intent" className="gm-button gm-button-forest">
