@@ -7,7 +7,7 @@
   if (!marker || !(currentScript instanceof HTMLScriptElement)) return;
 
   const scriptUrl = new URL(currentScript.src, window.location.href);
-  const frameUrl = new URL("/green-month?embed=1", scriptUrl.origin);
+  const frameUrl = new URL("/mohana/green-month/index.html", scriptUrl.origin);
 
   document.documentElement.classList.add("mohana-green-month-host");
 
