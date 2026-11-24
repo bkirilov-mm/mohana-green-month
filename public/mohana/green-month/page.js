@@ -94,53 +94,69 @@ function productLink(p) {
   return `${store}/product/${encodeURIComponent(p.handle)}`;
 }
 
-async function openProduct(p, {quick = false, button} = {}) {
-  if (basket.pending) return;
-  const requestNumber = ++productRequest;
-  if (!quick) {
-    show(productDialog);
-    document.getElementById('gm-product-content').innerHTML =
-      `<h2 id="gm-modal-title">${esc(p.title)}</h2><p role="status">Зареждаме продукта…</p>`;
+function requiresProductPage(live) {
+  return live?.customizations.some((field) => field.required) ||
+    live?.variants.pageInfo.hasNextPage ||
+    live?.bundle?.products.some(({product}) =>
+      product.customizations.some((field) => field.required) || product.variants.pageInfo.hasNextPage
+    );
+}
+
+async function addCardProduct(p) {
+  const live = await basket.product(p.handle);
+  if (!live?.availableForSale) return 'Продуктът е изчерпан.';
+  if (requiresProductPage(live)) return 'Отвори подробностите за продукта, за да избереш необходимите опции.';
+
+  const variant = live.selectedOrFirstAvailableVariant;
+  if (live.bundle) {
+    const ids = live.bundle.products.map(({product}) =>
+      product.variants.nodes.find((option) => option.availableForSale)?.id
+    );
+    if (!ids.length || ids.some((id) => !id)) return 'Комплектът е изчерпан.';
+    return basket.change('bundle', live.id, minimum(variant), {variantIds: ids});
   }
-  if (button) button.disabled = true;
+
+  const selected = variant?.availableForSale ? variant : live.variants.nodes.find((option) => option.availableForSale);
+  if (!selected) return 'Продуктът е изчерпан.';
+  return basket.change('add', selected.id, minimum(selected));
+}
+
+// Finish each click before the next one uses or creates the guest cart.
+let pendingAdds = Promise.resolve();
+function quickAdd(p, button) {
+  if (button.disabled) return;
+  const label = button.textContent;
+  button.disabled = true;
+  button.textContent = 'Добавяме…';
+  pendingAdds = pendingAdds.then(async () => {
+    try {
+      const message = await addCardProduct(p);
+      showToast(message || '✓ Добавено в количката: ' + p.title);
+    } catch {
+      showToast('Продуктът не се зареди. Опитай отново.');
+    } finally {
+      button.disabled = false;
+      button.textContent = label;
+    }
+  });
+}
+
+async function openProduct(p) {
+  const requestNumber = ++productRequest;
+  show(productDialog);
+  document.getElementById('gm-product-content').innerHTML =
+    `<h2 id="gm-modal-title">${esc(p.title)}</h2><p role="status">Зареждаме продукта…</p>`;
   try {
     const live = await basket.product(p.handle);
     if (requestNumber !== productRequest) return;
-    const variants = live?.variants.nodes ?? [];
-    const variant = live?.selectedOrFirstAvailableVariant;
-    const requiresProductPage =
-      live?.customizations.some((field) => field.required) ||
-      live?.variants.pageInfo.hasNextPage ||
-      live?.bundle?.products.some(
-        ({product}) =>
-          product.customizations.some((field) => field.required) || product.variants.pageInfo.hasNextPage,
-      );
-    if (
-      quick &&
-      !live?.bundle &&
-      variant &&
-      variants.length < 2 &&
-      live.availableForSale &&
-      variant.availableForSale &&
-      !requiresProductPage
-    ) {
-      const message = await basket.change('add', variant.id, minimum(variant));
-      showToast(message || '✓ Добавено в количката');
-      announce(message || 'Продуктът е добавен в количката');
-      return;
-    }
-    show(productDialog);
-    renderProduct(p, live, requiresProductPage);
+    renderProduct(p, live, requiresProductPage(live));
   } catch {
     if (requestNumber !== productRequest) return;
-    show(productDialog);
     document.getElementById('gm-product-content').innerHTML = `<h2 id="gm-modal-title">${esc(p.title)}</h2>
       <p role="status">Продуктът не се зареди. Опитай отново.</p>
       <button class="gm-primary" id="gm-retry-product">Опитай отново</button>
       <a class="gm-secondary" target="_top" href="${esc(productLink(p))}">Към продукта в Mohana</a>`;
     document.getElementById('gm-retry-product').onclick = () => openProduct(p);
-  } finally {
-    if (button) button.disabled = false;
   }
 }
 
@@ -155,6 +171,7 @@ function renderProduct(p, live, productPageRequired, selected = live?.selectedOr
   );
   const variants = live?.variants.nodes ?? [];
   const image = selected?.image?.url || p.featuredImage?.url || p.images?.[0];
+  const title = p.title.replace(/(\d) +(мл|ml|мг|mg|кг|kg)(?![\p{L}\p{N}])/giu, '$1\u00a0$2');
   const full = p.descriptionText || '';
   const short = full.split('\n').filter(Boolean).slice(0, 2).join(' ').slice(0, 340);
   const variantPrice = selected?.price;
@@ -165,7 +182,7 @@ function renderProduct(p, live, productPageRequired, selected = live?.selectedOr
       ${image ? `<img id="gm-main-image" src="${esc(image)}" alt="${esc(p.title)}">` : ''}
     </div>
     <div class="gm-product-copy">
-      <p class="gm-modal-kicker">${type(p)}</p><h2 id="gm-modal-title">${esc(p.title)}</h2>
+      <p class="gm-modal-kicker">${type(p)}</p><h2 id="gm-modal-title">${esc(title)}</h2>
       <span class="gm-stock ${available ? '' : 'unavailable'}">${available ? 'В наличност' : 'В момента е изчерпан'}</span>
       ${
         variantPrice
@@ -195,7 +212,7 @@ function renderProduct(p, live, productPageRequired, selected = live?.selectedOr
           <button id="gm-minus" aria-label="Намали количеството">−</button>
           <input id="gm-quantity" aria-label="Количество" type="number" min="${minimum(selected)}" max="${Math.max(99, minimum(selected))}" step="1" value="${minimum(selected)}">
           <button id="gm-plus" aria-label="Увеличи количеството">+</button></div>
-          <button class="gm-primary" id="gm-add" ${available && !basket.pending ? '' : 'disabled'}>
+          <button class="gm-primary" id="gm-add" ${available ? '' : 'disabled'}>
             ${available ? 'Добави в количката <span aria-hidden="true">＋</span>' : 'Изчерпан продукт'}
           </button></div>`
       }
@@ -228,7 +245,11 @@ function renderProduct(p, live, productPageRequired, selected = live?.selectedOr
   content.querySelector('#gm-plus').onclick = () => (input.value = valid(Number(input.value) + 1));
   const partSelects = [...content.querySelectorAll('[data-bundle-part]')];
   button.onclick = async () => {
-    if (!available || basket.pending) return;
+    if (!available) return;
+    if (basket.pending) {
+      content.querySelector('#gm-added').textContent = 'Изчакай текущата промяна.';
+      return;
+    }
     button.disabled = true;
     if (selector) selector.disabled = true;
     for (const choice of partSelects) choice.disabled = true;
@@ -260,21 +281,19 @@ function renderProduct(p, live, productPageRequired, selected = live?.selectedOr
 }
 
 function renderBundleParts(parts) {
-  return `<div class="gm-bundle-parts">${parts
-    .map(({product, quantity}) => {
-      const variants = product.variants.nodes;
-      const selected = variants.find((v) => v.availableForSale);
-      return `<label>${quantity} × ${esc(product.title)}
-      <select data-bundle-part ${selected ? '' : 'disabled'}>
-        ${variants
-          .map(
-            (v) => `<option value="${esc(v.id)}" ${v === selected ? 'selected' : ''}
-          ${v.availableForSale ? '' : 'disabled'}>${esc(v.title)}${v.availableForSale ? '' : ' · Изчерпан'}</option>`,
-          )
-          .join('')}
-      </select></label>`;
-    })
-    .join('')}</div>`;
+  const choices = parts.map(({product, quantity}) => {
+    const available = product.variants.nodes.filter((variant) => variant.availableForSale);
+    // CloudCart expects a variant ID for every component, in bundle order.
+    if (available.length <= 1) {
+      return `<input type="hidden" data-bundle-part value="${esc(available[0]?.id ?? '')}">`;
+    }
+    const options = available.map((variant) =>
+      `<option value="${esc(variant.id)}">${esc(variant.title)}</option>`
+    ).join('');
+    return `<label class="gm-bundle-choice">${quantity} × ${esc(product.title)}
+      <select data-bundle-part>${options}</select></label>`;
+  });
+  return choices.join('');
 }
 
 function updateCart() {
@@ -412,11 +431,11 @@ document.addEventListener('click', (event) => {
   if (button) {
     event.preventDefault();
     const product = byHandle.get(button.dataset.quickAdd);
-    if (product) openProduct(product, {quick: true, button});
+    if (product) quickAdd(product, button);
     return;
   }
   const anchor = event.target.closest('a');
-  if (!anchor) return;
+  if (!anchor || productDialog.contains(anchor)) return;
   const url = new URL(anchor.href, location.href);
   if (url.origin !== store) return;
   if (url.pathname === '/cart') {
