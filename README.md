@@ -48,17 +48,33 @@ npm run build
 
 The supplied design, images, fonts, campaign settings, Storefront API queries, cart drawer and checkout integration are retained. Products and prices require working Mohana API credentials.
 
-## Classic CloudCart page embed
+## Green Month popup release
 
-The classic Mohana theme remains active. The Green Month campaign is embedded only on a normal CloudCart page at `https://mohana.bg/page/green-month`.
+The public campaign runs at https://mohana.bg/page/green-month. Its HTML, images,
+styles and browser code are in `public/mohana/green-month/`. The existing
+Nitrogen `/green-month` route is the earlier campaign. The live embed uses
+`/mohana/green-month/index.html`.
 
-1. Deploy this repository to Nova.
-2. Confirm that `https://green-month-5978adc2ca6a108d.cloudcart.dev/mohana/landing.js` returns JavaScript.
-3. Create a classic CloudCart page with page link `green-month`.
-4. Add an HTML/Code widget and paste the complete contents of `docs/CLOUDCART-EMBED.html`.
-5. Save and publish the page, then test products, cart and checkout on desktop and mobile.
+1. Overlay the release files onto the existing connected repository, preserving
+   the folder structure. The linked Nova workflow and environment stay with
+   that repository. A push to its `main` branch deploys automatically.
+2. When Nova deploys, open
+   https://green-month-5978adc2ca6a108d.cloudcart.dev/mohana/green-month/index.html
+   to check the release directly.
+3. In the classic CloudCart page with link `green-month`, replace the current
+   HTML/Code widget contents with `docs/CLOUDCART-EMBED.html`. The embed uses
+   an iframe so it does not depend on a script in the classic page editor.
+4. Open https://mohana.bg/page/green-month. In a private window, add two variants
+   and a second product, edit a quantity, and remove one line. Click
+   **Към поръчка** and compare every remaining product, variant and quantity
+   on the full-page CloudCart checkout. Stop before order submission.
 
-The loader displays the Nitrogen campaign in a full-window frame while the browser address stays on `mohana.bg/page/green-month`. The Nitrogen content security policy permits framing only from `mohana.bg` and `www.mohana.bg`.
+The popup looks up live variants when a visitor opens a product or uses quick
+add. The card displays use the supplied campaign snapshot. The drawer shows
+prices and quantities from the Storefront API. The campaign has its own guest
+cart, and the cart-specific CloudCart checkout URL opens in the top-level
+window. The classic store’s pre-existing cart is separate. Cart persistence
+across reloads uses tab storage when the browser allows it.
 
 ## Campaign edits
 
